@@ -1,5 +1,5 @@
 '''
-USAGI: Universal Synthesis Automation with Gate-level Simulation Integration
+USAGI: Ultra Synthesis Automation and Gate-Level Integration
 Author      : Chun-Chih, Yu
 Email       : chunchih.ee13@nycu.edu.tw
 Date        : 2024-11-20
