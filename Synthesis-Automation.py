@@ -1,8 +1,8 @@
 '''
-USAGI: Universal Synthesis Automation General Integration
+USAGI: Universal Synthesis Automation with Gate-level Simulation Integration
 Author      : Chun-Chih, Yu
 Email       : chunchih.ee13@nycu.edu.tw
-Date        : 2024-11-19
+Date        : 2024-11-20
 Description:
     
 Usage       :
@@ -13,7 +13,7 @@ Usage       :
 Dependencies:
     - Python 3
     - Standard Python libraries
-    - External commands: dcnxt_shell, ./08_check
+    - External commands: dcnxt_shell(for synthesis), vcs(for gate-level simulation), 08_check(check the synthesis result)
 '''
 
 import os
@@ -34,7 +34,7 @@ lower_bound = 3.0
 step = 0.1
 reverse = True  # if True, the cycle times will be in descending order
 dummy_dir = os.path.expanduser('~/dummy_dir')  # Dummy directory to store temporary files for different cycle times
-lab_source_dir = os.path.expanduser('~/Midterm_Project/Exercise')  # Path to the lab files, e.g., ~/Lab04/Exercise
+lab_source_dir = os.path.expanduser('~/Midterm_Project_bk/Exercise')  # Path to the lab files, e.g., ~/Lab04/Exercise
 max_workers = 100  # Number of parallel synthesis processes
 
 # ==================================================
@@ -43,13 +43,18 @@ max_workers = 100  # Number of parallel synthesis processes
 def performance_func(area, cycle_time, latency):
     return (area) * (cycle_time ** 2) * (latency ** 2)
 
+
+# ==================================================
+GREEN = "\033[92m"
+RED = "\033[91m"
+RESET = "\033[0m"
+
 def print_img():
     print(r"""
-
     """)
 
 def print_sep(text, total_length=100, end="\n"):
-    text_length = len(text)
+    text_length = len(re.sub(r'\033\[\d+m', '', text))
     eq_length = (total_length - text_length - 2) // 2
     separator = "-" * eq_length + " " + text + " " + "-" * eq_length
     if len(separator) < total_length:
@@ -60,7 +65,6 @@ def run_synthesis(cycle, cycle_dir):
     syn_command = 'dcnxt_shell -f syn.tcl -x "set_host_options -max_cores 8" -output_log_file syn.log && ./08_check'
     syn_working_dir = os.path.join(cycle_dir, '02_SYN')
 
-    # Run the synthesis command
     process = subprocess.run(
         syn_command,
         shell=True,
@@ -118,6 +122,55 @@ def run_synthesis(cycle, cycle_dir):
     }
 
     return result
+
+def run_gatesim(cycle, cycle_dir):
+
+    pattern_path = os.path.join(cycle_dir, '00_TESTBED', 'PATTERN.v')
+    if not os.path.exists(pattern_path):
+        print(f"Pattern file not found: {pattern_path}")
+        return False
+    else:
+        with open(pattern_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        content = re.sub(r"`define CYCLE_TIME\s*[\d\.]+", f"`define CYCLE_TIME {cycle}", content)
+
+        with open(pattern_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+    gatesim_command = 'vcs -timescale=1ns/1fs -j8 -sverilog +v2k -full64 -Mupdate -R -debug_access+all -f "filelist.f" -o "simv" -l "vcs.log" -P /usr/cad/synopsys/verdi/2019.06//share/PLI/VCS/linux64/novas.tab /usr/cad/synopsys/verdi/2019.06//share/PLI/VCS/linux64/pli.a -v ~iclabTA01/UMC018_CBDK/CIC/Verilog/fsa0m_a_generic_core_30.lib.src +define+FUNC +define+GATE +neg_tchk +nowarnNTCDSN'
+    gatesim_working_dir = os.path.join(cycle_dir, '03_GATE')
+
+    error_ignore_list = ["-lerrorinf", "Total errors:"]
+
+    process = subprocess.run(
+        gatesim_command,
+        shell=True,
+        cwd=gatesim_working_dir,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        encoding='utf-8',
+        errors='replace'
+    )
+
+    output = process.stdout + process.stderr
+
+    success = False
+
+    if "congratulations" in output.lower():
+        error_found = False
+        for line in output.splitlines():
+            if "error" in line.lower():
+                if not any(ignore_item in line for ignore_item in error_ignore_list):
+                    error_found = True
+                    break
+
+        if not error_found:
+            success = True
+
+    return success
+
 
 def main():
     print_img()
@@ -201,8 +254,13 @@ def main():
                 result = future.result()
                 area_str = f"{result['Area']:7.2f}" if result['Area'] is not None else "   N/A"
                 performance_str = f"{result['Performance']:15.2f}" if result['Performance'] is not None else "        N/A"
-                print(f"Cycle Time: {result['Cycle Time']:3.1f}, Area: {area_str}, Performance: {performance_str}, "
-                      f"Latency: {result['Latency']:6d}, Success: {result['Success']}" + (f", Error: {result['Error']}" if result['Error'] else ""))
+
+                if result["Success"] == "Yes":
+                    print(f"Cycle Time: {result['Cycle Time']:3.1f}, Area: {area_str}, Performance: {performance_str}, "
+                          f"Latency: {result['Latency']:6d}, Success: {GREEN}{result['Success']}{RESET}")
+                else:
+                    print(f"Cycle Time: {result['Cycle Time']:3.1f}, Area: {area_str}, Performance: {performance_str}, "
+                          f"Latency: {result['Latency']:6d}, Success: {RED}{result['Success']}{RESET}")
 
                 # Synchronize access to the best performance
                 with lock:
@@ -239,10 +297,20 @@ def main():
 
     # Print the best result
     print_sep(f"Total time: {time.time() - start_time} seconds")
+    print_sep("Synthesis results saved to results.csv")
     if best_result[0] is not None:
+        print(f"The best synthesis directory is retained at: {best_directory[0]}")
         print(f"Best result: Cycle Time: {best_result[0]['Cycle Time']}, Area: {best_result[0]['Area']}, Performance: {best_result[0]['Performance']}, Latency: {best_result[0]['Latency']}")
-    print_sep("Results saved to results.csv")
-    print(f"The best synthesis directory is retained at: {best_directory[0]}")
+
+    if best_result[0] is not None:    
+        print_sep("Running gate-level simulation")
+        success = run_gatesim(best_result[0]['Cycle Time'], best_directory[0])
+        if success:
+            print_sep(f"Gate-level simulation {GREEN}PASSED!!{RESET}")
+        else:
+            print_sep(f"Gate-level simulation {RED}FAILED!!{RESET}")
+    else:
+        print_sep("No best result found, skip gate-level simulation")
 
 if __name__ == "__main__":
     main()
