@@ -77,7 +77,7 @@ USAGI is a Python script designed to automate the process of synthesizing and pe
     Run the script using the following command:
 
     ```bash
-    python USAGI.py
+    python3 USAGI.py
     ```
 
     The script will perform the following steps:
