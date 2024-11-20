@@ -28,7 +28,7 @@ import concurrent.futures
 # ==================================================
 # Configuration
 # ==================================================
-latency = 113111  # Latency of the design
+latency = 1  # Latency of the design
 upper_bound = 5.0
 lower_bound = 3.0
 step = 0.1
