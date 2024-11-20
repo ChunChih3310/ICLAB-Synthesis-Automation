@@ -1,1 +1,1 @@
-# USAGI: Universal Synthesis Automation with Gate-level Simulation Integration
+# USAGI: Ultra Synthesis Automation and Gate-Level Integration
