@@ -97,5 +97,5 @@ This project is licensed under the MIT License
 
 ## Contact
 
-- **Author**: Chun-Chih Yu
+- **Author**: Chun-Chih, Yu
 - **Email**: [chunchih.ee13@nycu.edu.tw](mailto:chunchih.ee13@nycu.edu.tw)
