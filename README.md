@@ -4,6 +4,7 @@
 
 USAGI is a Python script designed to automate the process of synthesizing and performing gate-level simulations for digital designs across a range of cycle times. It helps designers find the optimal balance between area, performance, and latency by automating the synthesis process for multiple configurations and selecting the best result based on a customizable performance function.
 
+
 ## Features
 
 - Automates synthesis for a range of cycle times.
