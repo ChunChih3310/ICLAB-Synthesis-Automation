@@ -1,6 +1,7 @@
 # USAGI: Ultra Synthesis Automation and Gate-Level Integration
 
-![image](https://github.com/user-attachments/assets/7138c460-8aa5-4705-9b3f-8b9cfdb44454)
+![image](https://github.com/user-attachments/assets/06291db2-a284-45c9-a282-fc229804d337)
+
 
 USAGI is a Python script designed to automate the process of synthesizing and performing gate-level simulations for digital designs across a range of cycle times. It helps designers find the optimal balance between area, performance, and latency by automating the synthesis process for multiple configurations and selecting the best result based on a customizable performance function.
 
